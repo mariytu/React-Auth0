@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import Spinner from './Common/Spinner'
 
 const Profile = props => {
   const [profile, setProfile] = useState(null)
@@ -27,7 +28,9 @@ const Profile = props => {
       {/* The information available here will vary depending on the identity provider you login with */}
       <pre>{JSON.stringify(profile, null, 2)}</pre>
     </>
-  ) : null
+  ) : (
+    <Spinner />
+  )
 }
 
 export default Profile
