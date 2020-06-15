@@ -7,6 +7,8 @@ import Nav from './Nav'
 import Auth from './Auth/Auth'
 import Public from './Public'
 import Private from './Private'
+import Courses from './Courses'
+import Admin from './Admin'
 
 const App = props => {
   const auth = new Auth(props.history)
@@ -40,6 +42,26 @@ const App = props => {
           render={props =>
             auth.isAuthenticated() ? (
               <Private auth={auth} {...props} />
+            ) : (
+              auth.login()
+            )
+          }
+        />
+        <Route
+          path="/courses"
+          render={props =>
+            auth.isAuthenticated() && auth.userHasScopes(['read:courses']) ? (
+              <Courses auth={auth} {...props} />
+            ) : (
+              auth.login()
+            )
+          }
+        />
+        <Route
+          path="/admin"
+          render={props =>
+            auth.isAuthenticated() ? (
+              <Admin auth={auth} {...props} />
             ) : (
               auth.login()
             )

@@ -2,6 +2,7 @@ const express = require('express')
 require('dotenv').config()
 const jwt = require('express-jwt') // Validate JWT and set req.user
 const jwksRsa = require('jwks-rsa') // Retrieve RSA keys from a JSON Web Key set (JWKS) endpoint
+const checkScope = require('express-jwt-authz') // Validate JWT scopes
 
 const checkJwt = jwt({
   // Dynamically provide a signing key based on the kid in the header
@@ -17,9 +18,21 @@ const checkJwt = jwt({
   audience: process.env.REACT_APP_AUTH0_AUDIENCE,
   issuer: `https://${process.env.REACT_APP_AUTH0_DOMAIN}/`,
 
-  // This must match the algorithm selected in the Auth0 dashboard under your app's advanced settings under the OAuth tab
+  // This must match the algorithm selected in the Auth0 dashboard
+  // under your app's advanced settings under the OAuth tab
   algorithms: ['RS256'],
 })
+
+const checkRole = role => {
+  return function(req, res, next) {
+    const assignedRoles = req.user['http://localhost:3000/roles']
+    if (Array.isArray(assignedRoles) && assignedRoles.includes(role)) {
+      return next()
+    } else {
+      return res.status(401).send('Insufficient role')
+    }
+  }
+}
 
 const app = express()
 
@@ -32,6 +45,25 @@ app.get('/public', function(req, res) {
 app.get('/private', checkJwt, function(req, res) {
   res.json({
     message: 'Hello from a private API!',
+  })
+})
+
+/**
+ * In the real world, it would read the sub (the subscriber ID) from the
+ * access token and use it to query the database for the author's courses
+ */
+app.get('/course', checkJwt, checkScope(['read:courses']), function(req, res) {
+  res.json({
+    courses: [
+      { id: 1, title: 'Building Apps with React and Redux' },
+      { id: 2, title: 'Creating Reusable React Components' },
+    ],
+  })
+})
+
+app.get('/admin', checkJwt, checkRole('admin'), function(req, res) {
+  res.json({
+    message: 'Hello from an admin API!',
   })
 })
 
