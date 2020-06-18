@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Route, Redirect } from 'react-router-dom'
 import Home from './Home'
 import Profile from './Profile'
@@ -9,66 +9,40 @@ import Public from './Public'
 import Private from './Private'
 import Courses from './Courses'
 import Admin from './Admin'
+import PrivateRoute from './PrivateRoute'
+import AuthContext from './AuthContext'
+import Spinner from './Common/Spinner'
 
 const App = props => {
-  const auth = new Auth(props.history)
+  const [auth, setAuth] = useState(new Auth(props.history))
+  const [tokenRenewalComplete, setTokenRenewalComplete] = useState(false)
 
-  return (
-    <>
-      <Nav auth={auth} />
+  useEffect(() => {
+    auth.renewToken(() => setTokenRenewalComplete(true))
+  }, [])
+
+  return !tokenRenewalComplete ? (
+    <Spinner />
+  ) : (
+    <AuthContext.Provider value={auth}>
+      <Nav />
       <div className="body">
-        <Route
-          path="/"
-          exact
-          render={props => <Home auth={auth} {...props} />}
-        />
+        <Route path="/" exact render={props => <Home {...props} />} />
         <Route
           path="/callback"
           render={props => <Callback auth={auth} {...props} />}
         />
-        <Route
-          path="/profile"
-          render={props =>
-            auth.isAuthenticated() ? (
-              <Profile auth={auth} {...props} />
-            ) : (
-              <Redirect to="/" />
-            )
-          }
-        />
+        <PrivateRoute path="/profile" component={Profile} />
         <Route path="/public" component={Public} />
-        <Route
-          path="/private"
-          render={props =>
-            auth.isAuthenticated() ? (
-              <Private auth={auth} {...props} />
-            ) : (
-              auth.login()
-            )
-          }
-        />
-        <Route
+        <PrivateRoute path="/private" component={Private} />
+        <PrivateRoute
           path="/courses"
-          render={props =>
-            auth.isAuthenticated() && auth.userHasScopes(['read:courses']) ? (
-              <Courses auth={auth} {...props} />
-            ) : (
-              auth.login()
-            )
-          }
+          component={Courses}
+          scopes={['read:courses']}
         />
-        <Route
-          path="/admin"
-          render={props =>
-            auth.isAuthenticated() ? (
-              <Admin auth={auth} {...props} />
-            ) : (
-              auth.login()
-            )
-          }
-        />
+        <PrivateRoute path="/admin" component={Admin} />
       </div>
-    </>
+    </AuthContext.Provider>
   )
 }
 
